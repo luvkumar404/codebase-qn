@@ -13,13 +13,23 @@ export function chunkMarkdown(content: string): ChunkResult[] {
   let sectionStart = 0;
   let sectionLines: string[] = [];
 
-  function flush(endLineIndex: number): void {
+  function flush(): void {
+    // Trim trailing empty lines
+    while (sectionLines.length > 0 && sectionLines[sectionLines.length - 1].trim() === "") {
+      sectionLines.pop();
+    }
+    // Trim leading empty lines
+    while (sectionLines.length > 0 && sectionLines[0].trim() === "") {
+      sectionLines.shift();
+      sectionStart++;
+    }
+
     const text = sectionLines.join("\n");
-    if (text.trim().length > 0) {
+    if (text.length > 0) {
       chunks.push({
         content: text,
         startLine: sectionStart + 1, // 1-based
-        endLine: endLineIndex + 1, // 1-based inclusive
+        endLine: sectionStart + sectionLines.length, // 1-based inclusive
       });
     }
   }
@@ -29,7 +39,7 @@ export function chunkMarkdown(content: string): ChunkResult[] {
     // A heading line starts with one or more '#'
     if (/^#{1,6}\s/.test(line) && sectionLines.length > 0) {
       // Flush previous section
-      flush(i - 1);
+      flush();
       sectionStart = i;
       sectionLines = [line];
     } else {
@@ -39,7 +49,7 @@ export function chunkMarkdown(content: string): ChunkResult[] {
 
   // Flush last section
   if (sectionLines.length > 0) {
-    flush(lines.length - 1);
+    flush();
   }
 
   return chunks;
