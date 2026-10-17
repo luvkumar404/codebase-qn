@@ -1,69 +1,112 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useRef } from "react";
+import { DotField } from "@/components/DotField";
+import { RepoForm } from "@/components/RepoForm";
+import { Marquee } from "@/components/Marquee";
+import { Chat } from "@/components/Chat";
+import { SourcePanel } from "@/components/SourcePanel";
+import { useActiveRepo } from "@/hooks/useActiveRepo";
+import { useIndexRepo } from "@/hooks/useIndexRepo";
+import { useAskStream } from "@/hooks/useAskStream";
+
+export default function AskPage() {
+  const { activeRepo, setActiveRepo } = useActiveRepo();
+  const workspaceRef = useRef<HTMLElement>(null);
+
+  const {
+    messages,
+    isStreaming,
+    currentSources,
+    activeSourceIndex,
+    setActiveSourceIndex,
+    citedFiles,
+    ask,
+    resetChat,
+  } = useAskStream();
+
+  const handleIndexed = (result: { repoId: string; url: string }) => {
+    setActiveRepo({ repoId: result.repoId, url: result.url });
+    resetChat();
+    setTimeout(() => {
+      workspaceRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+    }, 100);
+  };
+
+  const { index, cancel, isLoading, error, statusMessage } =
+    useIndexRepo(handleIndexed);
+
+  // Derive readable owner/repo name
+  const repoName = activeRepo?.url
+    ? activeRepo.url.replace(/^https:\/\/github\.com\//, "").replace(/\/$/, "")
+    : "";
+
+  const handleAsk = (question: string) => {
+    if (activeRepo) {
+      ask(question, activeRepo.repoId);
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="flex-1 flex flex-col">
+      <section className="relative px-[clamp(20px,5vw,56px)] pt-[clamp(48px,9vw,104px)] pb-14 text-center overflow-hidden">
+        <DotField variant="center" />
+        <h1 className="relative mx-auto max-w-[15ch] font-display font-bold text-[clamp(40px,8vw,84px)] leading-[1.02] tracking-[-0.035em] text-foreground">
+          Ask your codebase.{" "}
+          <em className="not-italic text-primary">
+            Get answers with receipts.
+          </em>
+        </h1>
+        <p className="relative mx-auto mt-5.5 max-w-[46ch] text-muted-foreground text-[clamp(16px,2vw,19px)] leading-normal">
+          Paste a public GitHub repository. Every answer links to the exact
+          files and lines it came from.
+        </p>
+
+        <RepoForm
+          index={index}
+          cancel={cancel}
+          isLoading={isLoading}
+          error={error}
+          statusMessage={statusMessage}
+          initialUrl={activeRepo?.url || ""}
+          buttonLabel={activeRepo ? "Re-index" : "Index repository"}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+      </section>
+
+      <Marquee files={citedFiles} />
+
+      {activeRepo && (
+        <section
+          ref={workspaceRef}
+          className="px-[clamp(20px,5vw,56px)] py-8 flex-1"
+          aria-label="Workspace"
+        >
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] max-[900px]:grid-cols-1 gap-4 max-w-[1240px] mx-auto">
+            <Chat
+              repoName={repoName}
+              messages={messages}
+              isStreaming={isStreaming}
+              activeSourceIndex={activeSourceIndex}
+              onSelectSource={setActiveSourceIndex}
+              onAsk={handleAsk}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <SourcePanel
+              sources={currentSources}
+              activeSourceIndex={activeSourceIndex}
+              onSelectSource={setActiveSourceIndex}
+            />
+          </div>
+        </section>
+      )}
+
+      <footer className="mt-auto px-[clamp(20px,5vw,56px)] pt-7 pb-12 text-muted-foreground text-[13px] text-center">
+        In the real app answers stream directly from <code>/api/ask</code>.
+      </footer>
+    </main>
   );
 }

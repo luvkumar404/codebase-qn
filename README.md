@@ -217,48 +217,131 @@ No indexed code found for this repository.
 
 ---
 
+## Frontend Application
+
+The frontend is built using **Next.js App Router (TypeScript strict)**, **pure CSS Modules**, and typography via `next/font/google` (**Bricolage Grotesque**, **Inter**, and **JetBrains Mono**). It follows a dark theme with a single signature orange accent (`#ff5a1f`), pill-shaped interactive elements, and custom dot-grid backgrounds.
+
+### Pages & Capabilities
+
+1. **Ask Page (`/`)**:
+   - Client-side validation for public GitHub URLs (`https://github.com/owner/repo`).
+   - Repository indexing with an indeterminate progress bar, elapsed wait handling, and user cancellation via `AbortController`.
+   - Streaming question answering via `useAskStream` with chunk-boundary handling, live Markdown text rendering, and numbered citation chips.
+   - Dual-panel workspace with a conversation thread on the left and a synchronized source code viewer on the right with exact line ranges and highlighting.
+   - Dynamic marquee showing real cited file paths across questions.
+   - Automatic active repository restoration from `localStorage` (`cqa.activeRepo`), self-healing if backend records return 404.
+
+2. **Repositories Page (`/repos`)**:
+   - Local browser repository list tracking (`cqa.repos`), refreshed against `GET /api/repos/[id]` on page load.
+   - Real-time status cards (total repositories, searchable chunks, and active indexing tasks).
+   - Per-repository action controls: **Ask** (sets active repo and navigates to `/`), **Re-index** (triggers re-ingestion), and **Remove** (client-side removal with explicit disclaimer that database vectors remain).
+   - Fully responsive design collapsing from a 6-column grid to mobile card layouts under 860px.
+
+3. **Evaluation Page (`/eval`)**:
+   - Statically imported benchmark dataset from `eval/results.json`.
+   - Animated horizontal hit@8 progress bars across vector, hybrid, and hybrid + rerank configurations.
+   - Interactive question-by-question matrix with a "show only questions that missed" toggle and accessible text+icon badges.
+   - Sample disclaimer badge when `sample: true`.
+
+### How to Run
+
+1. Start the backend database container:
+   ```bash
+   docker compose up -d
+   ```
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+4. Run the test suite:
+   ```bash
+   npm test
+   ```
+5. Typecheck the codebase:
+   ```bash
+   npx tsc --noEmit
+   ```
+
+### How the Frontend Communicates with the API
+
+- **`POST /api/index`**: Sends `{ url }`. The backend blocks while cloning, chunking, and embedding. The frontend displays an indeterminate progress bar and exposes a `Cancel` button backed by an `AbortController`. Upon completion, real chunk and file counts are recorded and stored in `cqa.repos`.
+- **`GET /api/repos/[id]`**: Fetches repository status, commit SHA, file count, and chunk count. Used during page initialization to validate stored repositories and prune missing IDs (e.g. after a database reset).
+- **`POST /api/ask`**: Sends `{ repoId, question }` and receives a chunked `text/plain` stream. The custom `StreamParser` in `lib/stream.ts` buffers incoming chunks until the first newline (`\n`), parses the JSON header `{"sources":[...]}`, and emits streaming answer text for subsequent chunks.
+
+### Known Limitations
+
+1. **No Backend Repository List Endpoint**: The backend provides no endpoint to enumerate indexed repositories. The frontend persists indexed repository IDs in browser `localStorage` (`cqa.repos`). Clearing browser storage clears the visible list, though data remains in PostgreSQL.
+2. **No Granular Ingestion Progress**: The ingestion endpoint blocks until completion without streaming intermediate progress steps. The frontend displays an honest indeterminate progress bar rather than simulated percentage steps.
+3. **No Vector Deletion Endpoint**: The backend does not expose a DELETE endpoint. Removing a repository from the UI removes it only from the browser's local listing and explicitly warns the user that database records are preserved.
+
+---
+
 ## File Structure
 
 ```
 ├── app/
-│   └── api/
-│       ├── ask/
-│       │   └── route.ts            # POST: Streamed RAG answers
-│       ├── index/
-│       │   └── route.ts            # POST: Shallow clone & index repository
-│       └── repos/
-│           └── [id]/
-│               └── route.ts        # GET: Repo indexing status & chunk counts
+│   ├── api/
+│   │   ├── ask/
+│   │   │   └── route.ts            # POST: Streamed RAG answers
+│   │   ├── index/
+│   │   │   └── route.ts            # POST: Shallow clone & index repository
+│   │   └── repos/
+│   │       └── [id]/
+│   │           └── route.ts        # GET: Repo indexing status & chunk counts
+│   ├── eval/
+│   │   ├── eval.module.css         # Evaluation page styling
+│   │   └── page.tsx                # Evaluation dashboard (Server Component)
+│   ├── repos/
+│   │   ├── repos.module.css        # Repositories page styling
+│   │   └── page.tsx                # Repositories management page
+│   ├── globals.css                 # Design tokens, CSS variables, & base resets
+│   ├── layout.tsx                  # Root layout with Google Fonts & Header
+│   ├── page.module.css             # Ask page layout styles
+│   └── page.tsx                    # Main Ask page (Hero, Marquee, Workspace)
+├── components/
+│   ├── Answer.tsx                  # Answer text renderer with citation chips
+│   ├── Answer.module.css
+│   ├── Chat.tsx                    # Left panel: message thread & ask form
+│   ├── Chat.module.css
+│   ├── CitationChip.tsx            # Numbered interactive citation button
+│   ├── CitationChip.module.css
+│   ├── DotField.tsx                # Masked background radial dot pattern
+│   ├── DotField.module.css
+│   ├── EvalBars.tsx                # Animated hit@8 comparison bars
+│   ├── EvalBars.module.css
+│   ├── EvalTable.tsx               # Question-by-question evaluation table
+│   ├── EvalTable.module.css
+│   ├── Header.tsx                  # Brand dot mark + pill navigation
+│   ├── Header.module.css
+│   ├── Marquee.tsx                 # Cited files horizontal scrolling strip
+│   ├── Marquee.module.css
+│   ├── RepoForm.tsx                # Repository URL input with progress indicator
+│   ├── RepoForm.module.css
+│   ├── RepoList.tsx                # Repository list with actions and status dots
+│   ├── RepoList.module.css
+│   ├── SourcePanel.tsx             # Right panel: tabs & code viewer with line numbers
+│   └── SourcePanel.module.css
+├── eval/
+│   └── results.json                # Benchmark metrics for evaluation page
+├── hooks/
+│   ├── useActiveRepo.ts            # Active repository state & verification
+│   ├── useAskStream.ts             # Streaming fetch reader & source synchronization
+│   └── useIndexRepo.ts             # Repository indexing hook with AbortController
 ├── lib/
-│   ├── chunking/
-│   │   ├── fallback.ts             # ~60-line window chunking with ~8-line overlap
-│   │   ├── index.ts                # Chunker dispatcher based on extension
-│   │   └── markdown.ts             # Heading-based markdown chunking
-│   ├── db/
-│   │   ├── client.ts               # Drizzle ORM + pg.Pool singleton
-│   │   └── schema.ts               # repos + chunks tables with vector(1024)
-│   ├── gemini/
-│   │   ├── client.ts               # GoogleGenAI singleton & model constants
-│   │   ├── embed.ts                # Batched embedding with exponential backoff
-│   │   └── generate.ts             # AsyncGenerator streaming answer generator
-│   ├── ingest/
-│   │   ├── clone.ts                # Shallow git clone to temp directory with cleanup
-│   │   ├── index.ts                # Ingestion orchestration & atomic DB upsert
-│   │   ├── validate.ts             # Strict GitHub URL regex validator
-│   │   └── walk.ts                 # Recursive directory walker with exclusion filters
-│   ├── rag/
-│   │   ├── ask.ts                  # RAG answer streaming pipeline
-│   │   ├── citations.ts            # [n] citation extraction & validation
-│   │   ├── fuse.ts                 # Reciprocal Rank Fusion (k=60)
-│   │   ├── prompt.ts               # Numbered snippet context builder & system instruction
-│   │   └── retrieve.ts             # Vector search + tsvector keyword search
-│   ├── env.ts                      # Zod validation for environment variables
-│   └── types.ts                    # Shared types & constants (VECTOR_DIMENSION = 1024)
-├── drizzle/
-│   └── 0001_add_tsv_column.sql     # Custom SQL: pgvector extension, tsvector, GIN index
-├── scripts/
-│   └── migrate.ts                  # Migration runner (drizzle-kit push + custom SQL)
-├── __tests__/                      # Complete Jest test suite
-├── docker-compose.yml              # pgvector/pgvector:pg16 container
+│   ├── api.ts                      # Typed API client with custom ApiError
+│   ├── citations.ts                # Pure citation splitting & filtering
+│   ├── storage.ts                  # Safe localStorage wrapper
+│   ├── stream.ts                   # Stream parser for line-1 sources + text
+│   ├── types.ts                    # Shared types & constants
+│   ├── chunking/                   # Fallback & markdown chunking
+│   ├── db/                         # Drizzle schema & Postgres connection
+│   ├── gemini/                     # Google Gemini embedding & generation
+│   ├── ingest/                     # Git clone, walk, & indexing logic
+│   └── rag/                        # Retrieval, fusion, prompt, & streaming
+├── __tests__/                      # Jest unit & integration test suites
+├── drizzle/                        # Drizzle schema migrations
+├── docker-compose.yml              # pgvector container
 └── package.json
 ```
+

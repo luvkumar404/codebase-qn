@@ -1,26 +1,134 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@custom-variant dark (&:is(.dark *));
+
+:root,
+.dark {
+  --background: #0b0b0c;
+  --foreground: #f3f1ec;
+  --card: #141416;
+  --card-foreground: #f3f1ec;
+  --popover: #141416;
+  --popover-foreground: #f3f1ec;
+  --primary: #ff5a1f;
+  --primary-foreground: #0b0b0c;
+  --secondary: #1b1b1e;
+  --secondary-foreground: #f3f1ec;
+  --muted: #1b1b1e;
+  --muted-foreground: #9a978f;
+  --accent: #1b1b1e;
+  --accent-foreground: #f3f1ec;
+  --border: #2a2a2e;
+  --input: #2a2a2e;
+  --ring: #ff5a1f;
+  --destructive: #ff8a7a;
+  --destructive-foreground: #0b0b0c;
+  --ok: #7bd88f;
+  --accent-soft: rgba(255, 90, 31, 0.16);
+  --radius: 1.25rem;
 }
 
 @theme inline {
+  --font-display: var(--font-bricolage), "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --font-sans: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  --color-ok: var(--ok);
+  --color-accent-soft: var(--accent-soft);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 1. Dot-grid background & radial masks for DotField */
+.dot-grid {
+  background: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1.3px) 0 0 / 20px 20px;
+}
+.dot-mask-center {
+  -webkit-mask-image: radial-gradient(ellipse 70% 75% at 50% 0%, #000 25%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 75% at 50% 0%, #000 25%, transparent 75%);
+}
+.dot-mask-corner {
+  -webkit-mask-image: radial-gradient(ellipse 60% 100% at 0% 0%, #000 20%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 100% at 0% 0%, #000 20%, transparent 75%);
+}
+
+/* 2. Keyframes: marquee, status pulse, and indeterminate progress */
+@keyframes marquee-slide {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee-slide 38s linear infinite;
+}
+
+@keyframes status-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+.animate-status-pulse {
+  animation: status-pulse 1s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(120%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+.animate-indeterminate {
+  animation: indeterminate 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-status-pulse,
+  .animate-indeterminate {
+    animation: none !important;
+  }
 }

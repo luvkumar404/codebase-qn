@@ -1,0 +1,80 @@
+{
+  "sample": true,
+  "total": 25,
+  "setups": [
+    {
+      "name": "Vector search only",
+      "note": "Embeddings, top 8",
+      "hits": 15
+    },
+    {
+      "name": "Hybrid search",
+      "note": "Vector + keyword, merged with reciprocal rank fusion",
+      "hits": 20
+    },
+    {
+      "name": "Hybrid + rerank",
+      "note": "Top 25 reranked down to 8",
+      "hits": 22,
+      "best": true
+    }
+  ],
+  "questions": [
+    {
+      "question": "Where is authentication handled?",
+      "expectedFile": "src/middleware/auth.ts",
+      "vector": 1,
+      "hybrid": 1,
+      "rerank": 1
+    },
+    {
+      "question": "How are orders validated?",
+      "expectedFile": "src/services/orders.ts",
+      "vector": 0,
+      "hybrid": 1,
+      "rerank": 1
+    },
+    {
+      "question": "What does the useCart hook return?",
+      "expectedFile": "src/hooks/useCart.ts",
+      "vector": 0,
+      "hybrid": 1,
+      "rerank": 1
+    },
+    {
+      "question": "Where is the JWT secret read?",
+      "expectedFile": "src/config.ts",
+      "vector": 1,
+      "hybrid": 1,
+      "rerank": 1
+    },
+    {
+      "question": "How are failed payments retried?",
+      "expectedFile": "src/services/billing.ts",
+      "vector": 0,
+      "hybrid": 0,
+      "rerank": 1
+    },
+    {
+      "question": "Which routes require the admin role?",
+      "expectedFile": "src/app.ts",
+      "vector": 1,
+      "hybrid": 1,
+      "rerank": 1
+    },
+    {
+      "question": "Where is the database connection created?",
+      "expectedFile": "src/db/client.ts",
+      "vector": 1,
+      "hybrid": 1,
+      "rerank": 1
+    },
+    {
+      "question": "How is pagination implemented?",
+      "expectedFile": "src/utils/paginate.ts",
+      "vector": 0,
+      "hybrid": 0,
+      "rerank": 0
+    }
+  ]
+}
